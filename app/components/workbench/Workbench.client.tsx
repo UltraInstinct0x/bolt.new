@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { motion, type HTMLMotionProps, type Variants } from 'framer-motion';
 import { computed } from 'nanostores';
-import { memo, useCallback, useEffect } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import {
   type OnChangeCallback as OnEditorChange,
@@ -16,6 +16,7 @@ import { cubicEasingFn } from '~/utils/easings';
 import { renderLogger } from '~/utils/logger';
 import { EditorPanel } from './EditorPanel';
 import { Preview } from './Preview';
+import { exportFilesAsZip } from '~/utils/fileExport';
 
 interface WorkspaceProps {
   chatStarted?: boolean;
@@ -98,6 +99,16 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
   const onFileReset = useCallback(() => {
     workbenchStore.resetCurrentDocument();
   }, []);
+  const [isExporting, setIsExporting] = useState(false);
+  const handleExportFiles = async () => {
+    setIsExporting(true);
+
+    try {
+      await exportFilesAsZip();
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     chatStarted && (
@@ -122,15 +133,30 @@ export const Workbench = memo(({ chatStarted, isStreaming }: WorkspaceProps) => 
                 <Slider selected={selectedView} options={sliderOptions} setSelected={setSelectedView} />
                 <div className="ml-auto" />
                 {selectedView === 'code' && (
-                  <PanelHeaderButton
-                    className="mr-1 text-sm"
-                    onClick={() => {
-                      workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());
-                    }}
-                  >
-                    <div className="i-ph:terminal" />
-                    Toggle Terminal
-                  </PanelHeaderButton>
+                  <>
+                    <PanelHeaderButton
+                      className="mr-1 text-sm"
+                      onClick={() => {
+                        workbenchStore.toggleTerminal(!workbenchStore.showTerminal.get());
+                      }}
+                    >
+                      <div className="i-ph:terminal" />
+                      Toggle Terminal
+                    </PanelHeaderButton>
+                    <PanelHeaderButton className="mr-1 text-sm" onClick={handleExportFiles} disabled={isExporting}>
+                      {isExporting ? (
+                        <>
+                          <div className="animate-spin i-ph:circle-notch" />
+                          Exporting...
+                        </>
+                      ) : (
+                        <>
+                          <div className="i-ph:download" />
+                          Export Files
+                        </>
+                      )}
+                    </PanelHeaderButton>
+                  </>
                 )}
                 <IconButton
                   icon="i-ph:x-circle"
